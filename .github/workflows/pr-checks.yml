@@ -1,0 +1,91 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  terraform:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform_dir:
+          - infra/bootstrap
+          - infra/core
+          - infra/app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt
+        run: terraform -chdir=${{ matrix.terraform_dir }} fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform -chdir=${{ matrix.terraform_dir }} init -backend=false
+
+      - name: Terraform validate
+        run: terraform -chdir=${{ matrix.terraform_dir }} validate
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build FastAPI container image
+        run: docker build -t devsecops-api:pr-check ./app
+
+  checkov:
+    name: Checkov IaC scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov scan
+        run: checkov --directory infra --framework terraform --quiet --soft-fail
+
+  trivy:
+    name: Trivy security scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Run Trivy filesystem scan
+        run: trivy fs --severity HIGH,CRITICAL --exit-code 0 --no-progress .
+
+      - name: Build image for Trivy image scan
+        run: docker build -t devsecops-api:trivy-scan ./app
+
+      - name: Run Trivy image scan
+        run: trivy image --severity CRITICAL --exit-code 1 --no-progress devsecops-api:trivy-scan
