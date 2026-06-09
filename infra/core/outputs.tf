@@ -68,3 +68,28 @@ output "acr_admin_enabled" {
   description = "Whether the Azure Container Registry admin user is enabled."
   value       = module.acr.admin_enabled
 }
+
+output "managed_identity_name" {
+  description = "Name of the User Assigned Managed Identity used by the application runtime."
+  value       = module.identity.name
+}
+
+output "managed_identity_id" {
+  description = "ID of the User Assigned Managed Identity used by the application runtime."
+  value       = module.identity.id
+}
+
+output "managed_identity_principal_id" {
+  description = "Principal ID of the User Assigned Managed Identity, used for Azure RBAC assignments."
+  value       = module.identity.principal_id
+}
+
+output "managed_identity_client_id" {
+  description = "Client ID of the User Assigned Managed Identity."
+  value       = module.identity.client_id
+}
+
+output "acr_pull_role_assignment_id" {
+  description = "ID of the AcrPull role assignment granted to the Managed Identity."
+  value       = azurerm_role_assignment.container_app_identity_acr_pull.id
+}

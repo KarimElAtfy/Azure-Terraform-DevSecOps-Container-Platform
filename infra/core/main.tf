@@ -33,3 +33,21 @@ module "acr" {
   admin_enabled       = var.acr_admin_enabled
   tags                = local.common_tags
 }
+
+module "identity" {
+  source = "./modules/identity"
+
+  name                = local.managed_identity_name
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  tags                = local.common_tags
+}
+
+resource "azurerm_role_assignment" "container_app_identity_acr_pull" {
+  scope                = module.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = module.identity.principal_id
+  principal_type       = "ServicePrincipal"
+
+  skip_service_principal_aad_check = true
+}
