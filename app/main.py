@@ -1,8 +1,8 @@
+import logging
 import os
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
-
 
 APP_NAME = os.getenv("APP_NAME", "Azure DevSecOps Container Platform")
 APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
@@ -15,6 +15,21 @@ APP_SECRET_MESSAGE = os.getenv("APP_SECRET_MESSAGE")
 APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv(
     "APPLICATIONINSIGHTS_CONNECTION_STRING"
 )
+
+logger = logging.getLogger("devsecops-api")
+logger.setLevel(logging.INFO)
+
+if APPLICATIONINSIGHTS_CONNECTION_STRING:
+    from azure.monitor.opentelemetry import configure_azure_monitor
+
+    configure_azure_monitor(
+        connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
+        logger_name="devsecops-api",
+    )
+
+    logger.info("Azure Monitor OpenTelemetry instrumentation configured.")
+else:
+    logger.info("Application Insights connection string not found. Telemetry export disabled.")
 
 
 app = FastAPI(
@@ -30,6 +45,8 @@ def utc_now() -> str:
 
 @app.get("/")
 def root() -> dict:
+    logger.info("Root endpoint called.")
+
     return {
         "app": APP_NAME,
         "version": APP_VERSION,
@@ -50,6 +67,8 @@ def health() -> dict:
 
 @app.get("/version")
 def version() -> dict:
+    logger.info("Version endpoint called.")
+
     return {
         "version": APP_VERSION,
         "commit_sha": GIT_COMMIT_SHA,
@@ -58,6 +77,8 @@ def version() -> dict:
 
 @app.get("/config")
 def config() -> dict:
+    logger.info("Config endpoint called.")
+
     return {
         "environment": APP_ENV,
         "region": APP_REGION,
@@ -68,6 +89,8 @@ def config() -> dict:
 
 @app.get("/secret-status")
 def secret_status() -> dict:
+    logger.info("Secret status endpoint called.")
+
     return {
         "secret_reference": "configured" if APP_SECRET_MESSAGE else "missing",
         "secret_loaded": bool(APP_SECRET_MESSAGE),
@@ -77,6 +100,8 @@ def secret_status() -> dict:
 
 @app.get("/error-test")
 def error_test() -> dict:
+    logger.error("Controlled error endpoint called.")
+
     raise HTTPException(
         status_code=500,
         detail="Controlled test error generated for observability validation.",
