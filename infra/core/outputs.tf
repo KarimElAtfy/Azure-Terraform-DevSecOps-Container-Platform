@@ -93,3 +93,38 @@ output "acr_pull_role_assignment_id" {
   description = "ID of the AcrPull role assignment granted to the Managed Identity."
   value       = azurerm_role_assignment.container_app_identity_acr_pull.id
 }
+
+output "key_vault_name" {
+  description = "Name of the Azure Key Vault."
+  value       = module.key_vault.name
+}
+
+output "key_vault_id" {
+  description = "ID of the Azure Key Vault."
+  value       = module.key_vault.id
+}
+
+output "key_vault_uri" {
+  description = "URI of the Azure Key Vault."
+  value       = module.key_vault.uri
+}
+
+output "app_secret_name" {
+  description = "Name of the application secret expected in Azure Key Vault."
+  value       = var.app_secret_name
+}
+
+output "app_secret_versionless_uri" {
+  description = "Versionless URI of the application secret expected in Azure Key Vault."
+  value       = "${module.key_vault.uri}secrets/${var.app_secret_name}"
+}
+
+output "key_vault_secrets_user_role_assignment_id" {
+  description = "ID of the Key Vault Secrets User role assignment granted to the Managed Identity."
+  value       = azurerm_role_assignment.container_app_identity_key_vault_secrets_user.id
+}
+
+output "current_user_key_vault_secrets_officer_role_assignment_id" {
+  description = "ID of the Key Vault Secrets Officer role assignment granted to the current Azure user."
+  value       = azurerm_role_assignment.current_user_key_vault_secrets_officer.id
+}

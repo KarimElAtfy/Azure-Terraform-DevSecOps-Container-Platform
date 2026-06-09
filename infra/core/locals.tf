@@ -8,6 +8,8 @@ locals {
 
   managed_identity_name = "id-${var.project_name}-${var.environment}-${var.region_code}"
 
+  key_vault_name = lower("${var.key_vault_name_prefix}-${var.environment}-${var.region_code}-${random_string.key_vault_suffix.result}")
+
   common_tags = {
     project     = var.project_name
     environment = var.environment

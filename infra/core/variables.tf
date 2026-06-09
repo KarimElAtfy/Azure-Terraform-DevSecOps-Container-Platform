@@ -81,3 +81,47 @@ variable "acr_admin_enabled" {
   type        = bool
   default     = false
 }
+
+variable "key_vault_name_prefix" {
+  description = "Prefix used for the Azure Key Vault name."
+  type        = string
+  default     = "kvdc"
+
+  validation {
+    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9-]{1,15}$", var.key_vault_name_prefix))
+    error_message = "Key Vault name prefix must start with a letter and contain only letters, numbers, and hyphens."
+  }
+}
+
+variable "key_vault_sku_name" {
+  description = "SKU name of the Azure Key Vault."
+  type        = string
+  default     = "standard"
+
+  validation {
+    condition     = contains(["standard", "premium"], var.key_vault_sku_name)
+    error_message = "Key Vault SKU must be either standard or premium."
+  }
+}
+
+variable "key_vault_soft_delete_retention_days" {
+  description = "Number of days that Key Vault items should be retained for soft-delete."
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.key_vault_soft_delete_retention_days >= 7 && var.key_vault_soft_delete_retention_days <= 90
+    error_message = "Soft-delete retention must be between 7 and 90 days."
+  }
+}
+
+variable "app_secret_name" {
+  description = "Name of the application secret expected to exist in Azure Key Vault."
+  type        = string
+  default     = "app-secret-message"
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9-]+$", var.app_secret_name))
+    error_message = "Secret name must contain only letters, numbers, and hyphens."
+  }
+}

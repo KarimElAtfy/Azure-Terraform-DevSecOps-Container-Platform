@@ -1,4 +1,12 @@
+data "azurerm_client_config" "current" {}
+
 resource "random_string" "acr_suffix" {
+  length  = 6
+  upper   = false
+  special = false
+}
+
+resource "random_string" "key_vault_suffix" {
   length  = 6
   upper   = false
   special = false
@@ -50,4 +58,31 @@ resource "azurerm_role_assignment" "container_app_identity_acr_pull" {
   principal_type       = "ServicePrincipal"
 
   skip_service_principal_aad_check = true
+}
+
+module "key_vault" {
+  source = "./modules/key-vault"
+
+  name                       = local.key_vault_name
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  sku_name                   = var.key_vault_sku_name
+  soft_delete_retention_days = var.key_vault_soft_delete_retention_days
+  tags                       = local.common_tags
+}
+
+resource "azurerm_role_assignment" "container_app_identity_key_vault_secrets_user" {
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = module.identity.principal_id
+  principal_type       = "ServicePrincipal"
+
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "current_user_key_vault_secrets_officer" {
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
 }
