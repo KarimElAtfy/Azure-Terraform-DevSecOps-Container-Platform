@@ -20,17 +20,24 @@ logger = logging.getLogger("devsecops-api")
 logger.setLevel(logging.INFO)
 
 if APPLICATIONINSIGHTS_CONNECTION_STRING:
-    from azure.monitor.opentelemetry import configure_azure_monitor
+    try:
+        from azure.monitor.opentelemetry import configure_azure_monitor
 
-    configure_azure_monitor(
-        connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
-        logger_name="devsecops-api",
-    )
+        configure_azure_monitor(
+            connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
+            logger_name="devsecops-api",
+        )
 
-    logger.info("Azure Monitor OpenTelemetry instrumentation configured.")
+        logger.info("Azure Monitor OpenTelemetry instrumentation configured.")
+
+    except Exception as exc:
+        logger.warning(
+            "Azure Monitor OpenTelemetry instrumentation could not be configured. "
+            "The application will continue without telemetry export. Error: %s",
+            exc,
+        )
 else:
     logger.info("Application Insights connection string not found. Telemetry export disabled.")
-
 
 app = FastAPI(
     title=APP_NAME,
