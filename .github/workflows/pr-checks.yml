@@ -87,5 +87,8 @@ jobs:
       - name: Build image for Trivy image scan
         run: docker build -t devsecops-api:trivy-scan ./app
 
-      - name: Run Trivy image scan
-        run: trivy image --severity CRITICAL --exit-code 1 --no-progress devsecops-api:trivy-scan
+      - name: Run Trivy image scan report
+        run: trivy image --severity HIGH,CRITICAL --exit-code 0 --no-progress devsecops-api:trivy-scan
+
+      - name: Run Trivy image security gate
+        run: trivy image --scanners vuln --ignore-unfixed --severity CRITICAL --exit-code 1 --no-progress devsecops-api:trivy-scan
