@@ -10,6 +10,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: deploy-container-app-main
+  cancel-in-progress: true
+
 env:
   IMAGE_REPOSITORY: devsecops-api
   CONTAINER_APP_NAME: ca-devsecops-api-dev-gwc
@@ -17,11 +21,13 @@ env:
   TFSTATE_CONTAINER_NAME: tfstate
   CORE_STATE_KEY: core.dev.tfstate
   APP_STATE_KEY: app.dev.tfstate
+  TF_IN_AUTOMATION: true
 
 jobs:
   deploy:
     name: Build, push and deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -39,7 +45,7 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Get ACR login server
+      - name: Resolve Azure Container Registry login server
         id: acr
         shell: bash
         run: |
@@ -66,7 +72,7 @@ jobs:
         run: |
           docker push "${{ steps.acr.outputs.login_server }}/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}"
 
-      - name: Create Terraform backend config for app stack
+      - name: Create Terraform backend configuration
         shell: bash
         run: |
           cat > infra/app/backend.tf <<'EOF'
@@ -84,6 +90,10 @@ jobs:
             -backend-config="container_name=${{ env.TFSTATE_CONTAINER_NAME }}" \
             -backend-config="key=${{ env.APP_STATE_KEY }}" \
             -backend-config="use_azuread_auth=true"
+
+      - name: Terraform format check app stack
+        shell: bash
+        run: terraform -chdir=infra/app fmt -check -recursive
 
       - name: Terraform validate app stack
         shell: bash
@@ -111,7 +121,7 @@ jobs:
             -var="container_image_tag=${{ github.sha }}" \
             -var="git_commit_sha=${{ github.sha }}"
 
-      - name: Get Container App URL
+      - name: Resolve Container App URL
         id: container_app
         shell: bash
         run: |
@@ -123,9 +133,24 @@ jobs:
 
           echo "url=https://$FQDN" >> "$GITHUB_OUTPUT"
 
-      - name: Run smoke test
+      - name: Run Container App smoke test
         shell: pwsh
         run: |
           ./scripts/smoke-test-container-app.ps1 `
             -AppUrl "${{ steps.container_app.outputs.url }}" `
             -ExpectedCommitSha "${{ github.sha }}"
+
+      - name: Write deployment summary
+        shell: bash
+        run: |
+          {
+            echo "## Container App deployment summary"
+            echo ""
+            echo "| Item | Value |"
+            echo "| --- | --- |"
+            echo "| Container App | \`${{ env.CONTAINER_APP_NAME }}\` |"
+            echo "| Resource Group | \`${{ env.RESOURCE_GROUP_NAME }}\` |"
+            echo "| Image | \`${{ steps.acr.outputs.login_server }}/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}\` |"
+            echo "| App URL | ${{ steps.container_app.outputs.url }} |"
+            echo "| Commit SHA | \`${{ github.sha }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
