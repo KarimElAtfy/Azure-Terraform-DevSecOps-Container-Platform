@@ -5,3 +5,14 @@ module "resource_group" {
   location = var.location
   tags     = local.common_tags
 }
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  log_analytics_workspace_name = local.log_analytics_workspace_name
+  application_insights_name    = local.application_insights_name
+  resource_group_name          = module.resource_group.name
+  location                     = module.resource_group.location
+  log_retention_in_days        = var.log_retention_in_days
+  tags                         = local.common_tags
+}

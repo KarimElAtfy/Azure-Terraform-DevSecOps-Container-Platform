@@ -42,3 +42,14 @@ variable "owner" {
   type        = string
   default     = "karim-el-atfy"
 }
+
+variable "log_retention_in_days" {
+  description = "Number of days to retain logs in Log Analytics."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.log_retention_in_days >= 30 && var.log_retention_in_days <= 730
+    error_message = "Log retention must be between 30 and 730 days."
+  }
+}

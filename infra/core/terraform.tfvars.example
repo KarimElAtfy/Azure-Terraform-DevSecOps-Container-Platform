@@ -3,3 +3,5 @@ environment  = "dev"
 location     = "germanywestcentral"
 region_code  = "gwc"
 owner        = "karim-el-atfy"
+
+log_retention_in_days = 30
