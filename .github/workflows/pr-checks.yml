@@ -10,10 +10,15 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  TF_IN_AUTOMATION: true
+  IMAGE_NAME: devsecops-api
+
 jobs:
   terraform:
     name: Terraform checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
@@ -29,11 +34,13 @@ jobs:
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
-      - name: Terraform fmt
+      - name: Terraform format check
         run: terraform -chdir=${{ matrix.terraform_dir }} fmt -check -recursive
 
-      - name: Terraform init
+      - name: Terraform init without backend
         run: terraform -chdir=${{ matrix.terraform_dir }} init -backend=false
 
       - name: Terraform validate
@@ -42,17 +49,19 @@ jobs:
   docker:
     name: Docker build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Build FastAPI container image
-        run: docker build -t devsecops-api:pr-check ./app
+        run: docker build -t ${{ env.IMAGE_NAME }}:pr-check ./app
 
   checkov:
     name: Checkov IaC scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -62,11 +71,17 @@ jobs:
         run: pip install checkov
 
       - name: Run Checkov scan
-        run: checkov --directory infra --framework terraform --quiet --soft-fail
+        run: |
+          checkov \
+            --directory infra \
+            --framework terraform \
+            --quiet \
+            --soft-fail
 
   trivy:
     name: Trivy security scan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -81,14 +96,31 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      - name: Run Trivy filesystem scan
-        run: trivy fs --severity HIGH,CRITICAL --exit-code 0 --no-progress .
+      - name: Run Trivy filesystem report
+        run: |
+          trivy fs \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --no-progress \
+            .
 
       - name: Build image for Trivy image scan
-        run: docker build -t devsecops-api:trivy-scan ./app
+        run: docker build -t ${{ env.IMAGE_NAME }}:trivy-scan ./app
 
-      - name: Run Trivy image scan report
-        run: trivy image --severity HIGH,CRITICAL --exit-code 0 --no-progress devsecops-api:trivy-scan
+      - name: Run Trivy image report
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --no-progress \
+            ${{ env.IMAGE_NAME }}:trivy-scan
 
       - name: Run Trivy image security gate
-        run: trivy image --scanners vuln --ignore-unfixed --severity CRITICAL --exit-code 1 --no-progress devsecops-api:trivy-scan
+        run: |
+          trivy image \
+            --scanners vuln \
+            --ignore-unfixed \
+            --severity CRITICAL \
+            --exit-code 1 \
+            --no-progress \
+            ${{ env.IMAGE_NAME }}:trivy-scan
