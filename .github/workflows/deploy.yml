@@ -1,0 +1,131 @@
+name: Deploy Container App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  IMAGE_REPOSITORY: devsecops-api
+  CONTAINER_APP_NAME: ca-devsecops-api-dev-gwc
+  RESOURCE_GROUP_NAME: rg-devsecops-container-dev-gwc
+  TFSTATE_CONTAINER_NAME: tfstate
+  CORE_STATE_KEY: core.dev.tfstate
+  APP_STATE_KEY: app.dev.tfstate
+
+jobs:
+  deploy:
+    name: Build, push and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get ACR login server
+        id: acr
+        shell: bash
+        run: |
+          ACR_LOGIN_SERVER=$(az acr show \
+            --name "${{ vars.ACR_NAME }}" \
+            --query loginServer \
+            --output tsv)
+
+          echo "login_server=$ACR_LOGIN_SERVER" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Azure Container Registry
+        shell: bash
+        run: az acr login --name "${{ vars.ACR_NAME }}"
+
+      - name: Build Docker image
+        shell: bash
+        run: |
+          docker build \
+            -t "${{ steps.acr.outputs.login_server }}/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}" \
+            ./app
+
+      - name: Push Docker image
+        shell: bash
+        run: |
+          docker push "${{ steps.acr.outputs.login_server }}/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}"
+
+      - name: Create Terraform backend config for app stack
+        shell: bash
+        run: |
+          cat > infra/app/backend.tf <<'EOF'
+          terraform {
+            backend "azurerm" {}
+          }
+          EOF
+
+      - name: Terraform init app stack
+        shell: bash
+        run: |
+          terraform -chdir=infra/app init \
+            -backend-config="resource_group_name=${{ vars.TFSTATE_RESOURCE_GROUP_NAME }}" \
+            -backend-config="storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT_NAME }}" \
+            -backend-config="container_name=${{ env.TFSTATE_CONTAINER_NAME }}" \
+            -backend-config="key=${{ env.APP_STATE_KEY }}" \
+            -backend-config="use_azuread_auth=true"
+
+      - name: Terraform validate app stack
+        shell: bash
+        run: terraform -chdir=infra/app validate
+
+      - name: Terraform plan app stack
+        shell: bash
+        run: |
+          terraform -chdir=infra/app plan \
+            -var="tfstate_resource_group_name=${{ vars.TFSTATE_RESOURCE_GROUP_NAME }}" \
+            -var="tfstate_storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT_NAME }}" \
+            -var="tfstate_container_name=${{ env.TFSTATE_CONTAINER_NAME }}" \
+            -var="core_state_key=${{ env.CORE_STATE_KEY }}" \
+            -var="container_image_tag=${{ github.sha }}" \
+            -var="git_commit_sha=${{ github.sha }}"
+
+      - name: Terraform apply app stack
+        shell: bash
+        run: |
+          terraform -chdir=infra/app apply -auto-approve \
+            -var="tfstate_resource_group_name=${{ vars.TFSTATE_RESOURCE_GROUP_NAME }}" \
+            -var="tfstate_storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT_NAME }}" \
+            -var="tfstate_container_name=${{ env.TFSTATE_CONTAINER_NAME }}" \
+            -var="core_state_key=${{ env.CORE_STATE_KEY }}" \
+            -var="container_image_tag=${{ github.sha }}" \
+            -var="git_commit_sha=${{ github.sha }}"
+
+      - name: Get Container App URL
+        id: container_app
+        shell: bash
+        run: |
+          FQDN=$(az containerapp show \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP_NAME }}" \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+
+          echo "url=https://$FQDN" >> "$GITHUB_OUTPUT"
+
+      - name: Run smoke test
+        shell: pwsh
+        run: |
+          ./scripts/smoke-test-container-app.ps1 `
+            -AppUrl "${{ steps.container_app.outputs.url }}" `
+            -ExpectedCommitSha "${{ github.sha }}"
