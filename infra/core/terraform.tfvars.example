@@ -1,0 +1,5 @@
+project_name = "devsecops-container"
+environment  = "dev"
+location     = "germanywestcentral"
+region_code  = "gwc"
+owner        = "karim-el-atfy"
