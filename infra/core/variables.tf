@@ -125,3 +125,25 @@ variable "app_secret_name" {
     error_message = "Secret name must contain only letters, numbers, and hyphens."
   }
 }
+
+variable "tfstate_resource_group_name" {
+  description = "Resource Group containing the Terraform remote state Storage Account."
+  type        = string
+}
+
+variable "tfstate_storage_account_name" {
+  description = "Storage Account containing Terraform remote state files."
+  type        = string
+}
+
+variable "github_repository" {
+  description = "GitHub repository allowed to authenticate to Azure using OIDC."
+  type        = string
+  default     = "KarimElAtfy/Azure-Terraform-DevSecOps-Container-Platform"
+}
+
+variable "github_actions_branch" {
+  description = "GitHub branch allowed to authenticate to Azure using OIDC."
+  type        = string
+  default     = "main"
+}

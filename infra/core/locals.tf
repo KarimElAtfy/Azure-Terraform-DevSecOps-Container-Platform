@@ -12,6 +12,10 @@ locals {
 
   container_app_environment_name = "cae-${var.project_name}-${var.environment}-${var.region_code}"
 
+  github_actions_identity_name                = "id-github-actions-${var.project_name}-${var.environment}-${var.region_code}"
+  github_actions_federated_credential_name    = "github-${var.github_actions_branch}"
+  github_actions_federated_credential_subject = "repo:${var.github_repository}:ref:refs/heads/${var.github_actions_branch}"
+
   common_tags = {
     project     = var.project_name
     environment = var.environment

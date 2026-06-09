@@ -1,5 +1,10 @@
 data "azurerm_client_config" "current" {}
 
+data "azurerm_storage_account" "tfstate" {
+  name                = var.tfstate_storage_account_name
+  resource_group_name = var.tfstate_resource_group_name
+}
+
 resource "random_string" "acr_suffix" {
   length  = 6
   upper   = false
@@ -95,4 +100,49 @@ module "container_app_environment" {
   location                   = module.resource_group.location
   log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
   tags                       = local.common_tags
+}
+
+module "github_actions_identity" {
+  source = "./modules/identity"
+
+  name                = local.github_actions_identity_name
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  tags                = local.common_tags
+}
+
+resource "azurerm_federated_identity_credential" "github_actions_main" {
+  name                = local.github_actions_federated_credential_name
+  resource_group_name = module.resource_group.name
+  parent_id           = module.github_actions_identity.id
+  issuer              = "https://token.actions.githubusercontent.com"
+  subject             = local.github_actions_federated_credential_subject
+  audience            = ["api://AzureADTokenExchange"]
+}
+
+resource "azurerm_role_assignment" "github_actions_tfstate_blob_contributor" {
+  scope                = data.azurerm_storage_account.tfstate.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = module.github_actions_identity.principal_id
+  principal_type       = "ServicePrincipal"
+
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "github_actions_acr_push" {
+  scope                = module.acr.id
+  role_definition_name = "AcrPush"
+  principal_id         = module.github_actions_identity.principal_id
+  principal_type       = "ServicePrincipal"
+
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "github_actions_resource_group_contributor" {
+  scope                = module.resource_group.id
+  role_definition_name = "Contributor"
+  principal_id         = module.github_actions_identity.principal_id
+  principal_type       = "ServicePrincipal"
+
+  skip_service_principal_aad_check = true
 }
