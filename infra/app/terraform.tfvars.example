@@ -1,0 +1,18 @@
+tfstate_resource_group_name  = "<tfstate-resource-group-name>"
+tfstate_storage_account_name = "<tfstate-storage-account-name>"
+tfstate_container_name       = "tfstate"
+core_state_key               = "core.dev.tfstate"
+
+container_app_name         = "ca-devsecops-api-dev-gwc"
+container_name             = "devsecops-api"
+container_image_repository = "devsecops-api"
+container_image_tag        = "manual-test"
+
+target_port  = 8000
+cpu          = 0.25
+memory       = "0.5Gi"
+min_replicas = 0
+max_replicas = 1
+
+app_version    = "0.1.0"
+git_commit_sha = "manual-test"
