@@ -128,3 +128,18 @@ output "current_user_key_vault_secrets_officer_role_assignment_id" {
   description = "ID of the Key Vault Secrets Officer role assignment granted to the current Azure user."
   value       = azurerm_role_assignment.current_user_key_vault_secrets_officer.id
 }
+
+output "container_app_environment_name" {
+  description = "Name of the Azure Container Apps Environment."
+  value       = module.container_app_environment.name
+}
+
+output "container_app_environment_id" {
+  description = "ID of the Azure Container Apps Environment."
+  value       = module.container_app_environment.id
+}
+
+output "container_app_environment_default_domain" {
+  description = "Default domain of the Azure Container Apps Environment."
+  value       = module.container_app_environment.default_domain
+}

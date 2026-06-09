@@ -86,3 +86,13 @@ resource "azurerm_role_assignment" "current_user_key_vault_secrets_officer" {
   role_definition_name = "Key Vault Secrets Officer"
   principal_id         = data.azurerm_client_config.current.object_id
 }
+
+module "container_app_environment" {
+  source = "./modules/container-app-environment"
+
+  name                       = local.container_app_environment_name
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  tags                       = local.common_tags
+}

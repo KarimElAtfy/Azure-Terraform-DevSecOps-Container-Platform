@@ -10,6 +10,8 @@ locals {
 
   key_vault_name = lower("${var.key_vault_name_prefix}-${var.environment}-${var.region_code}-${random_string.key_vault_suffix.result}")
 
+  container_app_environment_name = "cae-${var.project_name}-${var.environment}-${var.region_code}"
+
   common_tags = {
     project     = var.project_name
     environment = var.environment
