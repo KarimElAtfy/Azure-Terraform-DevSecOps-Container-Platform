@@ -43,3 +43,28 @@ output "application_insights_connection_string" {
   value       = module.monitoring.application_insights_connection_string
   sensitive   = true
 }
+
+output "acr_name" {
+  description = "Name of the Azure Container Registry."
+  value       = module.acr.name
+}
+
+output "acr_id" {
+  description = "ID of the Azure Container Registry."
+  value       = module.acr.id
+}
+
+output "acr_login_server" {
+  description = "Login server of the Azure Container Registry."
+  value       = module.acr.login_server
+}
+
+output "acr_sku" {
+  description = "SKU of the Azure Container Registry."
+  value       = module.acr.sku
+}
+
+output "acr_admin_enabled" {
+  description = "Whether the Azure Container Registry admin user is enabled."
+  value       = module.acr.admin_enabled
+}

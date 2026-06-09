@@ -53,3 +53,31 @@ variable "log_retention_in_days" {
     error_message = "Log retention must be between 30 and 730 days."
   }
 }
+
+variable "acr_name_prefix" {
+  description = "Lowercase alphanumeric prefix used for the Azure Container Registry name."
+  type        = string
+  default     = "acrdc"
+
+  validation {
+    condition     = can(regex("^[a-z0-9]{3,20}$", var.acr_name_prefix))
+    error_message = "ACR name prefix must be 3-20 characters long and contain only lowercase letters and numbers."
+  }
+}
+
+variable "acr_sku" {
+  description = "SKU of the Azure Container Registry."
+  type        = string
+  default     = "Basic"
+
+  validation {
+    condition     = contains(["Basic", "Standard", "Premium"], var.acr_sku)
+    error_message = "ACR SKU must be one of: Basic, Standard, Premium."
+  }
+}
+
+variable "acr_admin_enabled" {
+  description = "Whether the Azure Container Registry admin user is enabled."
+  type        = bool
+  default     = false
+}
