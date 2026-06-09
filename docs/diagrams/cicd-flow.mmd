@@ -1,0 +1,26 @@
+flowchart TD
+
+    dev["Developer"]
+    branch["Feature / Test Branch"]
+    pr["Pull Request"]
+    checks["PR Checks Workflow"]
+
+    merge["Merge to main"]
+
+    login["Azure login via OIDC"]
+    build["Build Docker image"]
+    push["Push image to ACR"]
+    tfapply["Terraform apply (infra/app)"]
+    smoke["Run smoke test"]
+    success["Deployment successful"]
+
+    dev --> branch
+    branch --> pr
+    pr --> checks
+    checks -->|"Terraform validate<br/>Docker build<br/>Checkov<br/>Trivy"| merge
+    merge --> login
+    login --> build
+    build --> push
+    push --> tfapply
+    tfapply --> smoke
+    smoke --> success

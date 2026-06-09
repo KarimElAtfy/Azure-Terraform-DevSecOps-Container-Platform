@@ -1,0 +1,28 @@
+flowchart LR
+
+    user["User / API Client"]
+
+    subgraph azure["Azure Subscription"]
+        subgraph app_rg["Application Resource Group"]
+            ca["Azure Container App"]
+            acr["Azure Container Registry"]
+            kv["Azure Key Vault"]
+            cae["Container Apps Environment"]
+            ai["Application Insights"]
+            law["Log Analytics Workspace"]
+        end
+
+        subgraph state_rg["Terraform State Resource Group"]
+            sa["Storage Account"]
+            tfstate["Blob Container: tfstate"]
+        end
+    end
+
+    user -->|"HTTPS"| ca
+    ca -->|"pulls image from"| acr
+    ca -->|"reads secret from"| kv
+    ca -->|"runs in"| cae
+    ca -->|"sends telemetry to"| ai
+    cae -->|"sends platform logs to"| law
+    ai -->|"stores / correlates logs with"| law
+    sa --> tfstate

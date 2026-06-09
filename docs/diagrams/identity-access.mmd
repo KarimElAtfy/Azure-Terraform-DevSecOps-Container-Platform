@@ -1,0 +1,20 @@
+flowchart LR
+
+    subgraph identities["Managed Identities"]
+        runtime["Runtime Managed Identity"]
+        github["GitHub Actions Managed Identity"]
+    end
+
+    subgraph resources["Azure Resources"]
+        acr["Azure Container Registry"]
+        kv["Azure Key Vault"]
+        state["Terraform State Storage"]
+        rg["Application Resource Group"]
+    end
+
+    runtime -->|"AcrPull"| acr
+    runtime -->|"Key Vault Secrets User"| kv
+
+    github -->|"AcrPush"| acr
+    github -->|"Storage Blob Data Contributor"| state
+    github -->|"Contributor"| rg
